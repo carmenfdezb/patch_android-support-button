@@ -1,0 +1,180 @@
+--- a/usr/share/jolla-settings/entries/android-runtime.json
++++ b/usr/share/jolla-settings/entries/android-runtime.json
+@@ -12,6 +12,16 @@
+             "params": {
+                 "source": "/usr/share/jolla-settings/pages/android-runtime/android.qml"
+             }
++        },
++        {
++            "path": "system_settings/info/android/android_active",
++            "title": "Android™",
++            "type": "custom",
++            "icon": "image://theme/icon-m-android",
++            "params": {
++                "source": "/usr/share/jolla-settings/pages/android-runtime/EnableSwitch.qml",
++                "type": "grid"
++            }
+         }
+     ]
+ }
+--- /dev/null
++++ b/usr/share/jolla-settings/pages/android-runtime/EnableSwitch.qml
+@@ -0,0 +1,158 @@
++import QtQuick 2.0
++import Sailfish.Silica 1.0
++import Nemo.DBus 2.0
++import Nemo.Configuration 1.0
++import com.jolla.apkd 1.0
++import com.jolla.settings 1.0
++import com.jolla.settings.system 1.0
++
++SettingsToggle {
++    id: root
++    
++    property string alienDalvikState
++    property bool alienDalvikAutostart
++    property string releaseVer
++    property string sdkVer
++    property var locale: Qt.locale()
++    property date securityPatch
++
++    DBusInterface {
++        id: apkInterface
++
++        bus: DBus.SystemBus
++        service: "com.jolla.apkd.control"
++        path: "/com/jolla/apkd"
++        iface: "com.jolla.apkd.control"
++    }
++
++    DBusInterface {
++        id: apkUserInterface
++
++        bus: DBus.SessionBus
++        service: "com.jolla.apkd"
++        path: "/com/jolla/apkd"
++        iface: "com.jolla.apkd"
++    }
++
++    DBusInterface {
++        id: dalvikService
++
++        bus: DBus.SystemBus
++        service: "org.freedesktop.systemd1"
++        iface: "org.freedesktop.systemd1.Unit"
++        signalsEnabled: true
++
++        function updateProperties() {
++            if (path !== "") {
++                root.alienDalvikState  = dalvikService.getProperty("ActiveState");
++            } else {
++                root.alienDalvikState = ""
++            }
++        }
++
++        onPropertiesChanged: runningUpdateTimer.start()
++        onPathChanged: updateProperties()
++    }
++
++    DBusInterface {
++        id: manager
++
++        bus: DBus.SystemBus
++        service: "org.freedesktop.systemd1"
++        path: "/org/freedesktop/systemd1"
++        iface: "org.freedesktop.systemd1.Manager"
++        signalsEnabled: true
++
++        signal unitNew(string name)
++        onUnitNew: {
++            if (name == "aliendalvik.service") {
++                pathUpdateTimer.start()
++            }
++        }
++
++        signal unitRemoved(string name)
++        onUnitRemoved: {
++            if (name == "aliendalvik.service") {
++                dalvikService.path = ""
++                pathUpdateTimer.stop()
++            }
++        }
++
++        signal unitFilesChanged()
++        onUnitFilesChanged: {
++            updateAutostart()
++        }
++
++        Component.onCompleted: {
++            updatePath()
++            updateAutostart()
++            updateVersionData()
++        }
++
++        function updateAutostart() {
++            manager.typedCall("GetUnitFileState", [{"type": "s", "value": "aliendalvik.service"}],
++                              function(state) {
++                                  if (state !== "disabled" && state !== "invalid") {
++                                      root.alienDalvikAutostart = true
++                                  } else {
++                                      root.alienDalvikAutostart = false
++                                  }
++                              },
++                              function() {
++                                  root.alienDalvikAutostart = false
++                              })
++        }
++
++        function updatePath() {
++            manager.typedCall("GetUnit", [{ "type": "s", "value": "aliendalvik.service"}], function(unit) {
++                dalvikService.path = unit
++            }, function() {
++                dalvikService.path = ""
++            })
++        }
++
++        function updateVersionData() {
++            apkInterface.typedCall("getAndroidVersionData", [],
++                function(verData) {
++                    sdkVer = verData[0]
++                    releaseVer = verData[1]
++                    securityPatch = Date.fromLocaleDateString(locale, verData[2], "yyyy-MM-dd")
++                }
++            )
++        }
++    }
++
++    Timer {
++        // starting and stopping can result in lots of property changes
++        id: runningUpdateTimer
++        interval: 100
++        onTriggered: dalvikService.updateProperties()
++    }
++
++    Timer {
++        // stopping service can result in unit appearing and disappering, for some reason.
++        id: pathUpdateTimer
++        interval: 100
++        onTriggered: manager.updatePath()
++    }
++    
++    ConfigurationValue {
++        id: packageReplaceConfig
++        key: "/alien/persist.package.replacement.enabled"
++        defaultValue: false
++    }
++
++	name: "Android™"
++    icon.source: "image://theme/icon-m-android"
++    
++    menu: ContextMenu {
++        SettingsMenuItem {
++            onClicked: goToSettings("system_settings/info/android")
++        }
++    }
++    
++    available: !(root.alienDalvikState == "activating" || root.alienDalvikState == "deactivating")
++    checked: (root.alienDalvikState == "active")
++    onToggled: apkInterface.typedCall("controlService", [{ "type": "b", "value": !(root.alienDalvikState == "active") }])
++
++}

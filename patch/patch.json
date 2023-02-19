@@ -1,0 +1,8 @@
+{
+    "name": "Android Support button",
+    "description": "Adding toggle Android Support button to the top menu for starting and stopping Android Support",
+    "category": "homescreen",
+	"infos": {
+        "maintainer": "carmenfdezb"
+	}
+}
