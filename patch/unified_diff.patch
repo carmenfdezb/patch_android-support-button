@@ -19,7 +19,7 @@
  }
 --- /dev/null
 +++ b/usr/share/jolla-settings/pages/android-runtime/EnableSwitch.qml
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,160 @@
 +import QtQuick 2.0
 +import Sailfish.Silica 1.0
 +import Nemo.DBus 2.0
@@ -30,9 +30,9 @@
 +
 +SettingsToggle {
 +    id: root
-+    
-+    property string alienDalvikState
-+    property bool alienDalvikAutostart
++
++    property string appSupportState
++    property bool appSupportAutostart
 +    property string releaseVer
 +    property string sdkVer
 +    property var locale: Qt.locale()
@@ -57,7 +57,7 @@
 +    }
 +
 +    DBusInterface {
-+        id: dalvikService
++        id: appSupportService
 +
 +        bus: DBus.SystemBus
 +        service: "org.freedesktop.systemd1"
@@ -66,9 +66,9 @@
 +
 +        function updateProperties() {
 +            if (path !== "") {
-+                root.alienDalvikState  = dalvikService.getProperty("ActiveState");
++                root.appSupportState  = appSupportService.getProperty("ActiveState");
 +            } else {
-+                root.alienDalvikState = ""
++                root.appSupportState = ""
 +            }
 +        }
 +
@@ -87,15 +87,15 @@
 +
 +        signal unitNew(string name)
 +        onUnitNew: {
-+            if (name == "aliendalvik.service") {
++            if (name == "appsupport.service") {
 +                pathUpdateTimer.start()
 +            }
 +        }
 +
 +        signal unitRemoved(string name)
 +        onUnitRemoved: {
-+            if (name == "aliendalvik.service") {
-+                dalvikService.path = ""
++            if (name == "appsupport.service") {
++                appSupportService.path = ""
 +                pathUpdateTimer.stop()
 +            }
 +        }
@@ -112,24 +112,24 @@
 +        }
 +
 +        function updateAutostart() {
-+            manager.typedCall("GetUnitFileState", [{"type": "s", "value": "aliendalvik.service"}],
++            manager.typedCall("GetUnitFileState", [{"type": "s", "value": "appsupport.service"}],
 +                              function(state) {
 +                                  if (state !== "disabled" && state !== "invalid") {
-+                                      root.alienDalvikAutostart = true
++                                      root.appSupportAutostart = true
 +                                  } else {
-+                                      root.alienDalvikAutostart = false
++                                      root.appSupportAutostart = false
 +                                  }
 +                              },
 +                              function() {
-+                                  root.alienDalvikAutostart = false
++                                  root.appSupportAutostart = false
 +                              })
 +        }
 +
 +        function updatePath() {
-+            manager.typedCall("GetUnit", [{ "type": "s", "value": "aliendalvik.service"}], function(unit) {
-+                dalvikService.path = unit
++            manager.typedCall("GetUnit", [{ "type": "s", "value": "appsupport.service"}], function(unit) {
++                appSupportService.path = unit
 +            }, function() {
-+                dalvikService.path = ""
++                appSupportService.path = ""
 +            })
 +        }
 +
@@ -148,7 +148,7 @@
 +        // starting and stopping can result in lots of property changes
 +        id: runningUpdateTimer
 +        interval: 100
-+        onTriggered: dalvikService.updateProperties()
++        onTriggered: appSupportService.updateProperties()
 +    }
 +
 +    Timer {
@@ -157,7 +157,7 @@
 +        interval: 100
 +        onTriggered: manager.updatePath()
 +    }
-+    
++
 +    ConfigurationValue {
 +        id: packageReplaceConfig
 +        key: "/alien/persist.package.replacement.enabled"
@@ -173,8 +173,10 @@
 +        }
 +    }
 +    
-+    available: !(root.alienDalvikState == "activating" || root.alienDalvikState == "deactivating")
-+    checked: (root.alienDalvikState == "active")
-+    onToggled: apkInterface.typedCall("controlService", [{ "type": "b", "value": !(root.alienDalvikState == "active") }])
-+
++    available: !(root.appSupportState == "activating" || root.appSupportState == "deactivating")
++    checked: (root.appSupportState == "active")
++    onToggled: apkInterface.typedCall("controlService", [
++                        { "type": "b", "value": !(root.appSupportState == "active") },
++                        { "type": "s", "value": "default" }
++                    ])
 +}
