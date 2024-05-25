@@ -19,18 +19,18 @@
  }
 --- /dev/null
 +++ b/usr/share/jolla-settings/pages/android-runtime/EnableSwitch.qml
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,149 @@
 +import QtQuick 2.0
 +import Sailfish.Silica 1.0
-+import Nemo.DBus 2.0
-+import Nemo.Configuration 1.0
++import org.nemomobile.dbus 2.0
++import org.nemomobile.configuration 1.0
 +import com.jolla.apkd 1.0
 +import com.jolla.settings 1.0
 +import com.jolla.settings.system 1.0
 +
 +SettingsToggle {
 +    id: root
-+    
++
 +    property string alienDalvikState
 +    property bool alienDalvikAutostart
 +    property string releaseVer
@@ -42,15 +42,6 @@
 +        id: apkInterface
 +
 +        bus: DBus.SystemBus
-+        service: "com.jolla.apkd.control"
-+        path: "/com/jolla/apkd"
-+        iface: "com.jolla.apkd.control"
-+    }
-+
-+    DBusInterface {
-+        id: apkUserInterface
-+
-+        bus: DBus.SessionBus
 +        service: "com.jolla.apkd"
 +        path: "/com/jolla/apkd"
 +        iface: "com.jolla.apkd"
@@ -157,7 +148,7 @@
 +        interval: 100
 +        onTriggered: manager.updatePath()
 +    }
-+    
++
 +    ConfigurationValue {
 +        id: packageReplaceConfig
 +        key: "/alien/persist.package.replacement.enabled"
