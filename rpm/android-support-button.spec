@@ -3,7 +3,7 @@ Name:       android-support-button
 BuildArch: noarch
 
 Summary:    Android Support button
-Version:    1.0.0
+Version:    1.1.0
 Release:    1
 Group:      Qt/Qt
 License:    WTFPL
@@ -40,5 +40,8 @@ fi
 %{_datadir}/patchmanager/patches/%{name}
 
 %changelog
+* Sat May 25 2024 Carmen Fdez. B. 1.1.0-1
+- Support for sfos 4.6
+
 * Sun Feb 19 2023 Carmen Fdez. B. 1.0.0-1
 - Initial release
